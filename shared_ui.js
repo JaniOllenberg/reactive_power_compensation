@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2. Handle Theme Switching logic
     const switcher = document.getElementById("theme-switcher");
-    const savedTheme = localStorage.getItem("pf_theme") || "default";
+    const savedTheme = localStorage.getItem("pf_theme") || "creamy";
     switcher.value = savedTheme;
     document.documentElement.setAttribute("data-theme", savedTheme);
 

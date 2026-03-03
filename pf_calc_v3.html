@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reactive Power & Phasor Visualizer</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { display: flex; gap: 20px; max-width: 1100px; width: 100%; flex-wrap: wrap; }
+        .controls { background: #2d2d2d; padding: 20px; border-radius: 12px; flex: 1; min-width: 250px; }
+        .visual-area { flex: 3; display: flex; gap: 15px; flex-wrap: wrap; }
+        .canvas-card { background: #2d2d2d; padding: 15px; border-radius: 12px; flex: 1; min-width: 300px; text-align: center; }
+        canvas { background: #000; border-radius: 8px; width: 100%; height: 250px; }
+        input { width: 100%; margin: 10px 0 20px 0; accent-color: #3498db; }
+        label { font-size: 0.85em; color: #bbb; display: block; }
+        .res-val { color: #3498db; font-weight: bold; }
+        .legend { font-size: 0.8em; margin-top: 10px; display: flex; justify-content: center; gap: 10px; }
+    </style>
+</head>
+<body>
+
+<h2>Power Factor Correction: Vectors & Waves</h2>
+
+<div class="container">
+    <div class="controls">
+        <label>Real Power: <span class="res-val" id="p_disp">10</span> kW</label>
+        <input type="range" id="p" min="1" max="50" value="10">
+        
+        <label>Current PF (cos φ1): <span class="res-val" id="pf1_val">0.70</span></label>
+        <input type="range" id="pf1" min="0.1" max="1" step="0.01" value="0.70">
+        
+        <label>Target PF (cos φ2): <span class="res-val" id="pf2_val">0.95</span></label>
+        <input type="range" id="pf2" min="0.1" max="1" step="0.01" value="0.95">
+        
+        <div style="background:#1a1a1a; padding: 15px; border-radius: 8px; border-left: 4px solid #3498db;">
+            <div>Required Q<sub>c</sub>: <span id="res_qc">0</span> kVAR</div>
+            <div>Capacitance: <span id="res_uf">0</span> µF</div>
+        </div>
+    </div>
+
+    <div class="visual-area">
+        <div class="canvas-card">
+            <canvas id="waveCanvas"></canvas>
+            <div class="legend">
+                <span style="color:#ffeb3b">V</span>
+                <span style="color:#f44336">I (Old)</span>
+                <span style="color:#4caf50">I (New)</span>
+            </div>
+            <p style="font-size: 0.75em; color: #888;">Time Domain (Oscilloscope)</p>
+        </div>
+
+        <div class="canvas-card">
+            <canvas id="phasorCanvas"></canvas>
+            <div class="legend">
+                <span style="color:#ffeb3b">V</span>
+                <span style="color:#f44336">S1</span>
+                <span style="color:#4caf50">S2</span>
+            </div>
+            <p style="font-size: 0.75em; color: #888;">Phasor Domain (Vector Math)</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const wCanvas = document.getElementById('waveCanvas');
+    const pCanvas = document.getElementById('phasorCanvas');
+    const wCtx = wCanvas.getContext('2d');
+    const pCtx = pCanvas.getContext('2d');
+
+    function init() {
+        wCanvas.width = wCanvas.offsetWidth; wCanvas.height = wCanvas.offsetHeight;
+        pCanvas.width = pCanvas.offsetWidth; pCanvas.height = pCanvas.offsetHeight;
+        draw();
+    }
+
+    function draw() {
+        const P = document.getElementById('p').value * 1000;
+        const pf1 = parseFloat(document.getElementById('pf1').value);
+        const pf2 = parseFloat(document.getElementById('pf2').value);
+        const V = 230; const f = 50;
+        
+        document.getElementById('p_disp').innerText = P/1000;
+        document.getElementById('pf1_val').innerText = pf1;
+        document.getElementById('pf2_val').innerText = pf2;
+
+        const phi1 = Math.acos(pf1);
+        const phi2 = Math.acos(pf2);
+        const Qc = P * (Math.tan(phi1) - Math.tan(phi2));
+        const C = (Qc > 0) ? Qc / (2 * Math.PI * f * Math.pow(V, 2)) : 0;
+
+        document.getElementById('res_qc').innerText = (Math.max(0, Qc/1000)).toFixed(2);
+        document.getElementById('res_uf').innerText = (Math.max(0, C * 1000000)).toFixed(1);
+
+        // --- DRAW SINE WAVES ---
+        wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+        const midY = wCanvas.height / 2;
+        for (let x = 0; x < wCanvas.width; x++) {
+            let t = x * 0.1;
+            drawPoint(wCtx, x, midY + Math.sin(t)*70, '#ffeb3b', x===0);
+            drawPoint(wCtx, x, midY + Math.sin(t - phi1)*55, '#f44336', x===0);
+            drawPoint(wCtx, x, midY + Math.sin(t - phi2)*55, '#4caf50', x===0);
+        }
+
+        // --- DRAW PHASOR DIAGRAM ---
+        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+        const centerX = 40; const centerY = pCanvas.height / 2;
+        
+        // Voltage Reference (X-axis)
+        drawVector(pCtx, centerX, centerY, 0, 150, '#ffeb3b', 'V');
+        // Apparent Power S1 (Old)
+        drawVector(pCtx, centerX, centerY, phi1, 130, '#f44336', 'S1');
+        // Apparent Power S2 (New)
+        drawVector(pCtx, centerX, centerY, phi2, 130, '#4caf50', 'S2');
+        // Reactive Compensation Qc (Vertical Arrow)
+        pCtx.setLineDash([5, 5]);
+        pCtx.beginPath();
+        pCtx.strokeStyle = '#3498db';
+        pCtx.moveTo(centerX + Math.cos(phi1)*130, centerY + Math.sin(phi1)*130);
+        pCtx.lineTo(centerX + Math.cos(phi1)*130, centerY + Math.sin(phi2)*130);
+        pCtx.stroke();
+        pCtx.setLineDash([]);
+    }
+
+    let lastY = {};
+    function drawPoint(ctx, x, y, color, first) {
+        ctx.strokeStyle = color; ctx.lineWidth = 2;
+        if (!first) { ctx.beginPath(); ctx.moveTo(x-1, lastY[color]); ctx.lineTo(x, y); ctx.stroke(); }
+        lastY[color] = y;
+    }
+
+    function drawVector(ctx, x, y, angle, len, color, label) {
+        const tx = x + Math.cos(angle) * len;
+        const ty = y + Math.sin(angle) * len;
+        ctx.strokeStyle = color; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(tx, ty); ctx.stroke();
+        // Arrowhead
+        ctx.fillStyle = color; ctx.beginPath();
+        ctx.arc(tx, ty, 4, 0, Math.PI*2); ctx.fill();
+    }
+
+    document.querySelectorAll('input').forEach(i => i.addEventListener('input', draw));
+    window.addEventListener('resize', init);
+    init();
+</script>
+</body>
+</html>

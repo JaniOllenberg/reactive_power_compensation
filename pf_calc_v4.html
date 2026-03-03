@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional 3-Phase PF Lab</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        .container { display: flex; gap: 20px; max-width: 1200px; width: 100%; flex-wrap: wrap; justify-content: center; }
+        .controls { background: #1e1e1e; padding: 25px; border-radius: 16px; flex: 1; min-width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid #333; }
+        .visual-area { flex: 2; display: flex; flex-direction: column; gap: 20px; min-width: 350px; }
+        .canvas-card { background: #1e1e1e; padding: 15px; border-radius: 16px; text-align: center; border: 1px solid #333; }
+        canvas { background: #000; border-radius: 8px; width: 100%; height: 220px; }
+        input[type=range] { width: 100%; margin: 10px 0 20px 0; cursor: pointer; }
+        select { width: 100%; padding: 10px; background: #333; color: white; border: none; border-radius: 8px; margin-bottom: 20px; font-size: 1em; }
+        label { font-size: 0.85em; color: #999; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .stat-card { background: #252525; padding: 15px; border-radius: 10px; border-bottom: 3px solid #3498db; }
+        .stat-label { font-size: 0.7em; color: #888; display: block; }
+        .stat-val { font-size: 1.2em; font-weight: bold; color: #fff; }
+    </style>
+</head>
+<body>
+
+<h1 style="color: #3498db; margin-bottom: 30px;">3-Phase Reactive Power Lab</h1>
+
+<div class="container">
+    <div class="controls">
+        <label>System Type</label>
+        <select id="sysType">
+            <option value="1">Single Phase (1φ)</option>
+            <option value="3d" selected>3-Phase Delta (3φ-Δ)</option>
+            <option value="3s">3-Phase Star (3φ-Y)</option>
+        </select>
+
+        <label>Load Power: <span id="p_disp">20</span> kW</label>
+        <input type="range" id="p" min="1" max="100" value="20">
+        
+        <label>Initial PF: <span id="pf1_val">0.70</span></label>
+        <input type="range" id="pf1" min="0.1" max="1" step="0.01" value="0.70">
+        
+        <label>Target PF: <span id="pf2_val">0.98</span></label>
+        <input type="range" id="pf2" min="0.1" max="1" step="0.01" value="0.98">
+
+        <label>Line Voltage (V): <span id="v_disp">400</span>V</label>
+        <input type="range" id="v_line" min="110" max="600" step="10" value="400">
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-label">Total Q<sub>c</sub></span>
+                <span class="stat-val"><span id="res_qc">0</span> kVAR</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Capacitance (per phase)</span>
+                <span class="stat-val"><span id="res_uf">0</span> µF</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="visual-area">
+        <div class="canvas-card">
+            <canvas id="waveCanvas"></canvas>
+            <p style="font-size: 0.75em; color: #666;">Waveform Alignment (V vs I)</p>
+        </div>
+        <div class="canvas-card">
+            <canvas id="phasorCanvas"></canvas>
+            <p style="font-size: 0.75em; color: #666;">Vector Compensation Diagram</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const wCanvas = document.getElementById('waveCanvas');
+    const pCanvas = document.getElementById('phasorCanvas');
+    const wCtx = wCanvas.getContext('2d');
+    const pCtx = pCanvas.getContext('2d');
+
+    function draw() {
+        const type = document.getElementById('sysType').value;
+        const P = document.getElementById('p').value * 1000;
+        const pf1 = parseFloat(document.getElementById('pf1').value);
+        const pf2 = parseFloat(document.getElementById('pf2').value);
+        const Vl = parseFloat(document.getElementById('v_line').value);
+        const f = 50;
+
+        document.getElementById('p_disp').innerText = P/1000;
+        document.getElementById('pf1_val').innerText = pf1;
+        document.getElementById('pf2_val').innerText = pf2;
+        document.getElementById('v_disp').innerText = Vl;
+
+        const phi1 = Math.acos(pf1);
+        const phi2 = Math.acos(pf2);
+        
+        // Total Reactive Power needed
+        const Qc = P * (Math.tan(phi1) - Math.tan(phi2));
+        
+        let C_per_phase = 0;
+        if (type === "1") {
+            C_per_phase = Qc / (2 * Math.PI * f * Vl**2);
+        } else if (type === "3d") {
+            // Delta: V_cap = V_line. Formula: Qc_total / (3 * 2pi * f * Vl^2)
+            C_per_phase = Qc / (3 * 2 * Math.PI * f * Vl**2);
+        } else if (type === "3s") {
+            // Star: V_cap = V_line/sqrt(3). Formula: Qc_total / (2pi * f * Vl^2)
+            C_per_phase = Qc / (2 * Math.PI * f * Vl**2);
+        }
+
+        document.getElementById('res_qc').innerText = (Math.max(0, Qc/1000)).toFixed(2);
+        document.getElementById('res_uf').innerText = (Math.max(0, C_per_phase * 1000000)).toFixed(1);
+
+        renderVisuals(phi1, phi2);
+    }
+
+    function renderVisuals(phi1, phi2) {
+        wCanvas.width = wCanvas.offsetWidth; wCanvas.height = wCanvas.offsetHeight;
+        pCanvas.width = pCanvas.offsetWidth; pCanvas.height = pCanvas.offsetHeight;
+        
+        // Sine Waves
+        wCtx.clearRect(0,0,wCanvas.width,wCanvas.height);
+        const midY = wCanvas.height/2;
+        for(let x=0; x<wCanvas.width; x++){
+            let t = x*0.1;
+            drawPoint(wCtx, x, midY + Math.sin(t)*60, '#ffeb3b', x===0); // V
+            drawPoint(wCtx, x, midY + Math.sin(t-phi1)*45, '#f44336', x===0); // I Old
+            drawPoint(wCtx, x, midY + Math.sin(t-phi2)*45, '#4caf50', x===0); // I New
+        }
+
+        // Phasors
+        pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+        const cx = 50, cy = pCanvas.height/2;
+        drawVec(pCtx, cx, cy, 0, 160, '#ffeb3b'); // V ref
+        drawVec(pCtx, cx, cy, phi1, 140, '#f44336'); // S1
+        drawVec(pCtx, cx, cy, phi2, 140, '#4caf50'); // S2
+    }
+
+    let lY = {};
+    function drawPoint(c,x,y,col,f){
+        c.strokeStyle=col; c.lineWidth=2;
+        if(!f){c.beginPath(); c.moveTo(x-1,lY[col]); c.lineTo(x,y); c.stroke();}
+        lY[col]=y;
+    }
+
+    function drawVec(c,x,y,a,l,col){
+        const tx=x+Math.cos(a)*l, ty=y+Math.sin(a)*l;
+        c.strokeStyle=col; c.lineWidth=3; c.beginPath(); c.moveTo(x,y); c.lineTo(tx,ty); c.stroke();
+        c.fillStyle=col; c.beginPath(); c.arc(tx,ty,4,0,7); c.fill();
+    }
+
+    document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', draw));
+    window.addEventListener('resize', draw);
+    draw();
+</script>
+</body>
+</html>

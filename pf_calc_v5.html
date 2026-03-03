@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Power Factor & Cost Lab</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --primary: #38bdf8;
+            --text: #f1f5f9;
+            --accent: #10b981;
+            --danger: #ef4444;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+        
+        .card { background: var(--card); border-radius: 16px; padding: 24px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1, h2, h3 { margin-top: 0; color: var(--primary); }
+        label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; }
+        input, select { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 1rem; }
+        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+        
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .stat-box { background: #0f172a; padding: 16px; border-radius: 12px; border-bottom: 4px solid var(--primary); }
+        .stat-box.success { border-bottom-color: var(--accent); }
+        .stat-val { font-size: 1.25rem; font-weight: 700; display: block; }
+        .stat-label { font-size: 0.7rem; color: #94a3b8; }
+
+        .visual-area { display: flex; flex-direction: column; gap: 20px; }
+        canvas { background: #020617; border-radius: 12px; width: 100%; height: 250px; }
+
+        .formula-section { margin-top: 30px; border-top: 1px solid #334155; padding-top: 20px; }
+        .formula-box { background: #020617; padding: 15px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; margin-bottom: 15px; border-left: 4px solid var(--primary); }
+        .math { font-style: italic; color: #bae6fd; }
+
+        .savings-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<header style="text-align: center; margin-bottom: 40px;">
+    <h1>⚡ Power Factor Master Lab</h1>
+    <p style="color: #94a3b8;">Calculator, Visualizer & Economics Learning Tool</p>
+</header>
+
+<div class="container">
+    <!-- INPUTS -->
+    <div class="card">
+        <h3>1. System Parameters</h3>
+        <label>System Type</label>
+        <select id="sysType">
+            <option value="1">Single Phase (1φ)</option>
+            <option value="3d" selected>3-Phase Delta (3φ-Δ)</option>
+            <option value="3s">3-Phase Star (3φ-Y)</option>
+        </select>
+
+        <label>Active Power (P): <span id="p_disp">20</span> kW</label>
+        <input type="range" id="p" min="1" max="200" value="20">
+        
+        <label>Initial PF (cos φ₁): <span id="pf1_val">0.75</span></label>
+        <input type="range" id="pf1" min="0.1" max="1" step="0.01" value="0.75">
+        
+        <label>Target PF (cos φ₂): <span id="pf2_val">0.98</span></label>
+        <input type="range" id="pf2" min="0.1" max="1" step="0.01" value="0.98">
+
+        <label>Voltage (V_line): <span id="v_disp">400</span> V</label>
+        <input type="range" id="v_line" min="110" max="690" step="10" value="400">
+
+        <h3>2. Economic Data</h3>
+        <label>Electricity Rate (€/kWh)</label>
+        <input type="number" id="kwh_rate" value="0.12" step="0.01">
+
+        <label>Operating Hours / Year</label>
+        <input type="number" id="hours" value="4000">
+
+        <label>Reactive Penalty (€/kVARh)</label>
+        <p style="font-size: 0.65rem; color: #64748b; margin-top: -10px;">Commonly applied when PF < 0.95</p>
+        <input type="number" id="kvarh_rate" value="0.02" step="0.005">
+    </div>
+
+    <!-- RESULTS & VISUALS -->
+    <div class="visual-area">
+        <div class="card">
+            <h3>Calculated Compensation</h3>
+            <div class="result-grid">
+                <div class="stat-box">
+                    <span class="stat-label">Total Q<sub>c</sub> Needed</span>
+                    <span class="stat-val"><span id="res_qc">0</span> kVAR</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Capacitance / Phase</span>
+                    <span class="stat-val"><span id="res_uf">0</span> µF</span>
+                </div>
+            </div>
+
+            <div class="savings-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <h3>Estimated Annual Savings</h3>
+            </div>
+            <div class="result-grid">
+                <div class="stat-box success">
+                    <span class="stat-label">Avoided Penalties</span>
+                    <span class="stat-val">€<span id="save_penalty">0</span></span>
+                </div>
+                <div class="stat-box success">
+                    <span class="stat-label">Loss Reduction (Est.)</span>
+                    <span class="stat-val">€<span id="save_losses">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <canvas id="waveCanvas"></canvas>
+            <canvas id="phasorCanvas" style="height: 200px; margin-top: 15px;"></canvas>
+        </div>
+
+        <div class="card formula-section">
+            <h3>📚 Learning the Math</h3>
+            
+            <p>1. <strong>Reactive Power (Q)</strong>: The power that does no work but creates the magnetic fields.</p>
+            <div class="formula-box">
+                Q = P × tan(arccos(PF))
+            </div>
+
+            <p>2. <strong>Compensation (Q<sub>c</sub>)</strong>: The amount of reactive power the capacitor must provide.</p>
+            <div class="formula-box">
+                Q<sub>c</sub> = P × [ tan(φ₁) - tan(φ₂) ]
+            </div>
+
+            <p>3. <strong>Capacitance (C)</strong>: Calculating the physical component size.</p>
+            <div class="formula-box">
+                <strong>1φ:</strong> C = Q<sub>c</sub> / (2π f V²)<br>
+                <strong>3φ Delta (Δ):</strong> C = Q<sub>c</sub> / (3 × 2π f V_line²)<br>
+                <strong>3φ Star (Y):</strong> C = Q<sub>c</sub> / (2π f V_line²)
+            </div>
+
+            <p>4. <strong>Economics</strong>: Savings from current reduction ($I^2R$).</p>
+            <div class="formula-box">
+                % Loss Reduction = 1 - (PF₁ / PF₂)²<br>
+                Annual Savings = [Avoided kVARh charges] + [Reduced Energy Losses]
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const wCanvas = document.getElementById('waveCanvas');
+    const pCanvas = document.getElementById('phasorCanvas');
+    const wCtx = wCanvas.getContext('2d');
+    const pCtx = pCanvas.getContext('2d');
+
+    function calculate() {
+        const type = document.getElementById('sysType').value;
+        const P_kw = parseFloat(document.getElementById('p').value);
+        const P = P_kw * 1000;
+        const pf1 = parseFloat(document.getElementById('pf1').value);
+        const pf2 = parseFloat(document.getElementById('pf2').value);
+        const Vl = parseFloat(document.getElementById('v_line').value);
+        const rate_kwh = parseFloat(document.getElementById('kwh_rate').value);
+        const rate_kvarh = parseFloat(document.getElementById('kvarh_rate').value);
+        const hours = parseFloat(document.getElementById('hours').value);
+        const f = 50;
+
+        // UI Updates
+        document.getElementById('p_disp').innerText = P_kw;
+        document.getElementById('pf1_val').innerText = pf1.toFixed(2);
+        document.getElementById('pf2_val').innerText = pf2.toFixed(2);
+        document.getElementById('v_disp').innerText = Vl;
+
+        // Reactive Math
+        const phi1 = Math.acos(pf1);
+        const phi2 = Math.acos(pf2);
+        const Qc = P * (Math.tan(phi1) - Math.tan(phi2));
+        
+        let C_farads = 0;
+        if (type === "1") {
+            C_farads = Qc / (2 * Math.PI * f * Vl**2);
+        } else if (type === "3d") {
+            C_farads = Qc / (3 * 2 * Math.PI * f * Vl**2);
+        } else if (type === "3s") {
+            C_farads = Qc / (2 * Math.PI * f * Vl**2);
+        }
+
+        document.getElementById('res_qc').innerText = (Math.max(0, Qc/1000)).toFixed(2);
+        document.getElementById('res_uf').innerText = (Math.max(0, C_farads * 1000000)).toFixed(1);
+
+        // --- Economic Savings ---
+        // 1. Avoided Penalties (Simplification: assuming penalty applies below 0.95 on all initial reactive energy)
+        const threshold = 0.95;
+        const reactive_before = P_kw * Math.tan(phi1);
+        const reactive_after = P_kw * Math.tan(phi2);
+        
+        // Only charge for reactive if PF < threshold
+        let penalty_savings = 0;
+        if (pf1 < threshold) {
+            const billable_kvarh_initial = reactive_before * hours;
+            const billable_kvarh_final = (pf2 < threshold) ? reactive_after * hours : 0;
+            penalty_savings = (billable_kvarh_initial - billable_kvarh_final) * rate_kvarh;
+        }
+
+        // 2. Efficiency Gains (I^2R reduction)
+        // Estimating that 2% of total power is lost in internal distribution at PF=1.0
+        const baseline_loss_percent = 0.02; 
+        const loss_before = P_kw * baseline_loss_percent * (1 / pf1**2);
+        const loss_after = P_kw * baseline_loss_percent * (1 / pf2**2);
+        const efficiency_savings = (loss_before - loss_after) * hours * rate_kwh;
+
+        document.getElementById('save_penalty').innerText = Math.max(0, penalty_savings).toFixed(0);
+        document.getElementById('save_losses').innerText = Math.max(0, efficiency_savings).toFixed(0);
+
+        renderVisuals(phi1, phi2);
+    }
+
+    function renderVisuals(phi1, phi2) {
+        wCanvas.width = wCanvas.offsetWidth; wCanvas.height = wCanvas.offsetHeight;
+        pCanvas.width = pCanvas.offsetWidth; pCanvas.height = pCanvas.offsetHeight;
+        
+        // Waves
+        wCtx.clearRect(0,0,wCanvas.width,wCanvas.height);
+        const midY = wCanvas.height/2;
+        wCtx.setLineDash([5, 5]); wCtx.strokeStyle = "#334155";
+        wCtx.beginPath(); wCtx.moveTo(0, midY); wCtx.lineTo(wCanvas.width, midY); wCtx.stroke();
+        wCtx.setLineDash([]);
+
+        let lastY = {};
+        function drawP(ctx,x,y,col,first){
+            ctx.strokeStyle=col; ctx.lineWidth=2;
+            if(!first){ctx.beginPath(); ctx.moveTo(x-1,lastY[col]); ctx.lineTo(x,y); ctx.stroke();}
+            lastY[col]=y;
+        }
+
+        for(let x=0; x<wCanvas.width; x++){
+            let t = x * 0.08;
+            drawP(wCtx, x, midY + Math.sin(t)*80, '#fbbf24', x===0); // Voltage
+            drawP(wCtx, x, midY + Math.sin(t-phi1)*60, '#ef4444', x===0); // Lagging
+            drawP(wCtx, x, midY + Math.sin(t-phi2)*60, '#10b981', x===0); // Corrected
+        }
+
+        // Phasors
+        pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+        const cx = 60, cy = pCanvas.height/2;
+        
+        function arrow(ctx,x,y,a,l,col,label){
+            const tx=x+Math.cos(a)*l, ty=y+Math.sin(a)*l;
+            ctx.strokeStyle=col; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(tx,ty); ctx.stroke();
+            ctx.fillStyle=col; ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fill();
+            ctx.fillText(label, tx+5, ty+5);
+        }
+        pCtx.fillStyle = "#94a3b8";
+        arrow(pCtx, cx, cy, 0, 150, '#fbbf24', 'V');
+        arrow(pCtx, cx, cy, phi1, 130, '#ef4444', 'S₁');
+        arrow(pCtx, cx, cy, phi2, 130, '#10b981', 'S₂');
+    }
+
+    document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', calculate));
+    window.addEventListener('resize', calculate);
+    calculate();
+</script>
+</body>
+</html>

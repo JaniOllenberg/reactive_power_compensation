@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Phase Power Visualizer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { display: flex; gap: 20px; max-width: 1000px; width: 100%; }
+        .controls { background: #2d2d2d; padding: 20px; border-radius: 12px; flex: 1; }
+        .visualizer { background: #2d2d2d; padding: 20px; border-radius: 12px; flex: 2; text-align: center; }
+        canvas { background: #000; border-radius: 8px; width: 100%; height: 300px; }
+        input { width: 100%; margin-bottom: 15px; }
+        label { display: block; font-size: 0.8em; color: #aaa; }
+        .legend { display: flex; justify-content: center; gap: 15px; margin-top: 10px; font-size: 0.9em; }
+        .v-color { color: #ffeb3b; } .i-old { color: #f44336; } .i-new { color: #4caf50; }
+    </style>
+</head>
+<body>
+
+    <h2>Sine Wave Phase Compensation</h2>
+
+    <div class="container">
+        <div class="controls">
+            <label>Real Power (kW)</label>
+            <input type="range" id="p" min="1" max="50" value="10">
+            
+            <label>Current Power Factor (<span id="pf1_val">0.70</span>)</label>
+            <input type="range" id="pf1" min="0.1" max="1" step="0.01" value="0.70">
+            
+            <label>Target Power Factor (<span id="pf2_val">0.95</span>)</label>
+            <input type="range" id="pf2" min="0.1" max="1" step="0.01" value="0.95">
+            
+            <hr style="border:0; border-top:1px solid #444">
+            <div id="results">
+                <p>Required: <strong id="res_qc">0</strong> kVAR</p>
+                <p>Capacitance: <strong id="res_uf">0</strong> µF</p>
+            </div>
+        </div>
+
+        <div class="visualizer">
+            <canvas id="waveCanvas"></canvas>
+            <div class="legend">
+                <span class="v-color">● Voltage</span>
+                <span class="i-old">● Current (Lagging)</span>
+                <span class="i-new">● Current (Corrected)</span>
+            </div>
+            <p style="font-size: 0.8em; color: #888; margin-top: 15px;">
+                Notice how the Green wave moves closer to the Yellow wave as you increase the target PF.
+            </p>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('waveCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    function draw() {
+        // Get Inputs
+        const P = document.getElementById('p').value * 1000;
+        const pf1 = document.getElementById('pf1').value;
+        const pf2 = document.getElementById('pf2').value;
+        const V = 230; // Standard Voltage
+        const f = 50;  // 50Hz
+        
+        document.getElementById('pf1_val').innerText = pf1;
+        document.getElementById('pf2_val').innerText = pf2;
+
+        // Calculations
+        const phi1 = Math.acos(pf1);
+        const phi2 = Math.acos(pf2);
+        const Qc = P * (Math.tan(phi1) - Math.tan(phi2));
+        const C = Qc / (2 * Math.PI * f * Math.pow(V, 2));
+
+        document.getElementById('res_qc').innerText = (Qc/1000).toFixed(2);
+        document.getElementById('res_uf').innerText = (C * 1000000).toFixed(1);
+
+        // Drawing Logic
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const midY = canvas.height / 2;
+        
+        ctx.beginPath();
+        ctx.strokeStyle = '#444';
+        ctx.moveTo(0, midY); ctx.lineTo(canvas.width, midY);
+        ctx.stroke();
+
+        for (let x = 0; x < canvas.width; x++) {
+            const time = x * 0.1;
+            
+            // Voltage Wave (Yellow)
+            const vY = midY + Math.sin(time) * 80;
+            drawPixel(x, vY, '#ffeb3b', (x===0));
+
+            // Lagging Current (Red) - Phase Shifted by phi1
+            const i1Y = midY + Math.sin(time - phi1) * 60;
+            drawPixel(x, i1Y, '#f44336', (x===0));
+
+            // Corrected Current (Green) - Phase Shifted by phi2
+            const i2Y = midY + Math.sin(time - phi2) * 60;
+            drawPixel(x, i2Y, '#4caf50', (x===0));
+        }
+    }
+
+    let prevPos = {};
+    function drawPixel(x, y, color, isFirst) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        if (!isFirst) {
+            ctx.beginPath();
+            ctx.moveTo(x - 1, prevPos[color]);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        prevPos[color] = y;
+    }
+
+    document.querySelectorAll('input').forEach(i => i.addEventListener('input', draw));
+    
+    // Set canvas internal resolution
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    draw();
+</script>
+</body>
+</html>

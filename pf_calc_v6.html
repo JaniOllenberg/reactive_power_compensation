@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3-Phase PF Visualizer (Physics Focus)</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --primary: #38bdf8;
+            --text: #f1f5f9;
+            --accent: #10b981;
+            --danger: #ef4444;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+        .container { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+        
+        .card { background: var(--card); border-radius: 16px; padding: 24px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1, h2, h3 { margin-top: 0; color: var(--primary); }
+        label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; }
+        input, select { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 1rem; }
+        
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .stat-box { background: #0f172a; padding: 16px; border-radius: 12px; border-bottom: 4px solid var(--primary); text-align: center; }
+        .stat-val { font-size: 1.25rem; font-weight: 700; display: block; }
+        .stat-label { font-size: 0.7rem; color: #94a3b8; }
+
+        .visual-area { display: flex; flex-direction: column; gap: 20px; }
+        canvas { background: #020617; border-radius: 12px; width: 100%; height: 220px; }
+
+        .formula-section { margin-top: 10px; border-top: 1px solid #334155; padding-top: 20px; }
+        .formula-box { background: #020617; padding: 12px; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 15px; border-left: 4px solid var(--primary); font-size: 0.9rem; }
+        .nav-link { color: var(--primary); text-decoration: none; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<header style="text-align: center; margin-bottom: 30px;">
+    <h1>⚡ 3-Phase Physics Lab</h1>
+    <p style="color: #94a3b8;">Visualizing Vector Compensation & Wave Phase Shifts</p>
+</header>
+
+<div class="container">
+    <div class="card">
+        <h3>System Configuration</h3>
+        <label>System Type</label>
+        <select id="sysType">
+            <option value="1">Single Phase (1φ)</option>
+            <option value="3d" selected>3-Phase Delta (3φ-Δ)</option>
+            <option value="3s">3-Phase Star (3φ-Y)</option>
+        </select>
+
+        <label>Active Power (P): <span id="p_disp">20</span> kW</label>
+        <input type="range" id="p" min="1" max="100" value="20">
+        
+        <label>Initial PF (cos φ₁): <span id="pf1_val">0.70</span></label>
+        <input type="range" id="pf1" min="0.1" max="1" step="0.01" value="0.70">
+        
+        <label>Target PF (cos φ₂): <span id="pf2_val">0.95</span></label>
+        <input type="range" id="pf2" min="0.1" max="1" step="0.01" value="0.95">
+
+        <label>Voltage (V_line): <span id="v_disp">400</span> V</label>
+        <input type="range" id="v_line" min="110" max="600" step="10" value="400">
+
+        <div class="formula-section">
+            <h3>📖 Key Formulas</h3>
+            <p style="font-size: 0.8rem; color: #94a3b8;">1. Total Reactive Goal:</p>
+            <div class="formula-box">Q<sub>c</sub> = P × [tan(arccos(PF₁)) - tan(arccos(PF₂))]</div>
+            
+            <p style="font-size: 0.8rem; color: #94a3b8;">2. Component Sizing (3φ Delta):</p>
+            <div class="formula-box">C = Q<sub>c</sub> / (3 × 2π × f × V_line²)</div>
+        </div>
+        <a href="index.html" class="nav-link">← Back to Project Overview</a>
+    </div>
+
+    <div class="visual-area">
+        <div class="card">
+            <div class="result-grid">
+                <div class="stat-box">
+                    <span class="stat-label">Total Compensation</span>
+                    <span class="stat-val"><span id="res_qc">0</span> kVAR</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Capacitance / Phase</span>
+                    <span class="stat-val"><span id="res_uf">0</span> µF</span>
+                </div>
+            </div>
+            <canvas id="waveCanvas"></canvas>
+            <p style="font-size: 0.75rem; color: #64748b; text-align: center; margin-top: 5px;">
+                Yellow: Voltage | Red: Uncorrected Current | Green: Corrected Current
+            </p>
+            <canvas id="phasorCanvas" style="height: 180px; margin-top: 20px;"></canvas>
+            <p style="font-size: 0.75rem; color: #64748b; text-align: center; margin-top: 5px;">
+                Phasor Diagram: S₁ (Red) is Apparent Power before, S₂ (Green) is after.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const wCanvas = document.getElementById('waveCanvas');
+    const pCanvas = document.getElementById('phasorCanvas');
+    const wCtx = wCanvas.getContext('2d');
+    const pCtx = pCanvas.getContext('2d');
+
+    function update() {
+        const type = document.getElementById('sysType').value;
+        const P_kw = parseFloat(document.getElementById('p').value);
+        const P = P_kw * 1000;
+        const pf1 = parseFloat(document.getElementById('pf1').value);
+        const pf2 = parseFloat(document.getElementById('pf2').value);
+        const Vl = parseFloat(document.getElementById('v_line').value);
+        const f = 50;
+
+        document.getElementById('p_disp').innerText = P_kw;
+        document.getElementById('pf1_val').innerText = pf1.toFixed(2);
+        document.getElementById('pf2_val').innerText = pf2.toFixed(2);
+        document.getElementById('v_disp').innerText = Vl;
+
+        const phi1 = Math.acos(pf1);
+        const phi2 = Math.acos(pf2);
+        const Qc = P * (Math.tan(phi1) - Math.tan(phi2));
+        
+        let C_f = 0;
+        if (type === "1") C_f = Qc / (2 * Math.PI * f * Vl**2);
+        else if (type === "3d") C_f = Qc / (3 * 2 * Math.PI * f * Vl**2);
+        else if (type === "3s") C_f = Qc / (2 * Math.PI * f * Vl**2);
+
+        document.getElementById('res_qc').innerText = (Math.max(0, Qc/1000)).toFixed(2);
+        document.getElementById('res_uf').innerText = (Math.max(0, C_f * 1000000)).toFixed(1);
+
+        render(phi1, phi2);
+    }
+
+    function render(phi1, phi2) {
+        wCanvas.width = wCanvas.offsetWidth; wCanvas.height = wCanvas.offsetHeight;
+        pCanvas.width = pCanvas.offsetWidth; pCanvas.height = pCanvas.offsetHeight;
+        
+        // Waves
+        wCtx.clearRect(0,0,wCanvas.width,wCanvas.height);
+        const midY = wCanvas.height/2;
+        let lastY = {};
+        for(let x=0; x<wCanvas.width; x++){
+            let t = x * 0.08;
+            drawP(wCtx, x, midY + Math.sin(t)*70, '#fbbf24', x===0, lastY, 'v');
+            drawP(wCtx, x, midY + Math.sin(t-phi1)*50, '#ef4444', x===0, lastY, 'i1');
+            drawP(wCtx, x, midY + Math.sin(t-phi2)*50, '#10b981', x===0, lastY, 'i2');
+        }
+
+        // Phasors
+        pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+        const cx = 80, cy = pCanvas.height/2;
+        drawVec(pCtx, cx, cy, 0, 140, '#fbbf24', 'V');
+        drawVec(pCtx, cx, cy, phi1, 120, '#ef4444', 'S₁');
+        drawVec(pCtx, cx, cy, phi2, 120, '#10b981', 'S₂');
+    }
+
+    function drawP(ctx,x,y,col,first,store,id){
+        ctx.strokeStyle=col; ctx.lineWidth=2;
+        if(!first){ctx.beginPath(); ctx.moveTo(x-1,store[id]); ctx.lineTo(x,y); ctx.stroke();}
+        store[id]=y;
+    }
+
+    function drawVec(ctx,x,y,a,l,col,label){
+        const tx=x+Math.cos(a)*l, ty=y+Math.sin(a)*l;
+        ctx.strokeStyle=col; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(tx,ty); ctx.stroke();
+        ctx.fillStyle=col; ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fill();
+        ctx.fillText(label, tx+5, ty+5);
+    }
+
+    document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', update));
+    window.addEventListener('resize', update);
+    update();
+</script>
+</body>
+</html>

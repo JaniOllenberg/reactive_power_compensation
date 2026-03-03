@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Interactive Phase Power Visualizer</title>
+    <link rel="stylesheet" href="shared_theme.css">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { display: flex; gap: 20px; max-width: 1000px; width: 100%; }
@@ -29,6 +30,9 @@
             
             <label>Target Power Factor (<span id="pf2_val">0.95</span>)</label>
             <input type="range" id="pf2" min="0.1" max="1" step="0.01" value="0.95">
+        <label>Frequency (Hz)</label>
+        <input type="number" id="freq" value="50" step="1">
+
             
             <hr style="border:0; border-top:1px solid #444">
             <div id="results">
@@ -60,7 +64,7 @@
         const pf1 = document.getElementById('pf1').value;
         const pf2 = document.getElementById('pf2').value;
         const V = 230; // Standard Voltage
-        const f = 50;  // 50Hz
+        const f = parseFloat(document.getElementById('freq').value) || 50;  // 50Hz
         
         document.getElementById('pf1_val').innerText = pf1;
         document.getElementById('pf2_val').innerText = pf2;
@@ -120,5 +124,6 @@
     canvas.height = canvas.offsetHeight;
     draw();
 </script>
+<script src="shared_ui.js"></script>
 </body>
 </html>

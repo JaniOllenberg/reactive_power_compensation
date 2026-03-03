@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master Power Factor & Cost Lab</title>
+    <link rel="stylesheet" href="shared_theme.css">
     <style>
         :root {
             --bg: #0f172a;
@@ -68,6 +69,9 @@
 
         <label>Voltage (V_line): <span id="v_disp">400</span> V</label>
         <input type="range" id="v_line" min="110" max="690" step="10" value="400">
+        <label>Frequency (Hz)</label>
+        <input type="number" id="freq" value="50" step="1">
+
 
         <h3>2. Economic Data</h3>
         <label>Electricity Rate (€/kWh)</label>
@@ -162,7 +166,7 @@
         const rate_kwh = parseFloat(document.getElementById('kwh_rate').value);
         const rate_kvarh = parseFloat(document.getElementById('kvarh_rate').value);
         const hours = parseFloat(document.getElementById('hours').value);
-        const f = 50;
+        const f = parseFloat(document.getElementById('freq').value) || 50;
 
         // UI Updates
         document.getElementById('p_disp').innerText = P_kw;
@@ -259,5 +263,6 @@
     window.addEventListener('resize', calculate);
     calculate();
 </script>
+<script src="shared_ui.js"></script>
 </body>
 </html>

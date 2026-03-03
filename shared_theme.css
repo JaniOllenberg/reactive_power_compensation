@@ -1,0 +1,71 @@
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --primary: #38bdf8;
+  --text: #f1f5f9;
+  --accent: #10b981;
+  --danger: #ef4444;
+  --border: #334155;
+  --canvas-bg: #020617;
+  --font: 'Inter', system-ui, sans-serif;
+  --input-bg: #0f172a;
+}
+
+[data-theme="light"] {
+  --bg: #f8fafc; --card: #ffffff; --primary: #0284c7; --text: #0f172a; --border: #e2e8f0; --canvas-bg: #f1f5f9; --input-bg: #ffffff;
+}
+[data-theme="creamy"] {
+  --bg: #fdfbf7; --card: #f5f0e6; --primary: #b45309; --text: #451a03; --border: #e7e5e4; --canvas-bg: #fffcf8; --input-bg: #ffffff;
+}
+[data-theme="matrix"] {
+  --bg: #000000; --card: #001100; --primary: #00ff00; --text: #00ff00; --border: #003300; --canvas-bg: #000000; --font: 'Courier New', monospace; --input-bg: #002200;
+}
+[data-theme="rainbow"] {
+  --bg: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%); --card: rgba(255,255,255,0.7); --primary: #ff0844; --text: #111; --border: #fff; --canvas-bg: rgba(255,255,255,0.5); --input-bg: rgba(255,255,255,0.8);
+}
+[data-theme="elegant"] {
+  --bg: #111111; --card: #1a1a1a; --primary: #d4af37; --text: #e0e0e0; --border: #d4af37; --canvas-bg: #0a0a0a; --font: 'Georgia', serif; --input-bg: #000000;
+}
+[data-theme="blueprint"] {
+  --bg: #0055a4; --card: #004488; --primary: #ffffff; --text: #ffffff; --border: #ffffff; --canvas-bg: #003366; --font: 'Courier New', monospace; --input-bg: #0055a4;
+}
+[data-theme="wireframe"] {
+  --bg: #ffffff; --card: #ffffff; --primary: #000000; --text: #000000; --border: #000000; --canvas-bg: #ffffff; --font: monospace; --input-bg: #ffffff;
+}
+[data-theme="cyberpunk"] {
+  --bg: #fcee0a; --card: #000000; --primary: #00ff9f; --text: #00ff9f; --border: #ff003c; --canvas-bg: #050505; --font: 'Trebuchet MS', sans-serif; --input-bg: #111;
+}
+[data-theme="miami"] {
+  --bg: #2d1b4e; --card: #1a0b2e; --primary: #ff00c8; --text: #00e5ff; --border: #ff00c8; --canvas-bg: #120422; --input-bg: #2d1b4e;
+}
+
+body { background: var(--bg) !important; color: var(--text) !important; font-family: var(--font) !important; transition: background 0.3s, color 0.3s; }
+.card, .controls, .visualizer, .canvas-card, .explainer, .gui-card, .stat-box, .formula-box, .result-box { 
+    background: var(--card) !important; 
+    border: 1px solid var(--border) !important; 
+    color: var(--text) !important;
+}
+h1, h2, h3, .res-val, .nav-link, .stat-val { color: var(--primary) !important; }
+input, select { background: var(--input-bg) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
+canvas { background: var(--canvas-bg) !important; border: 1px solid var(--border) !important; }
+
+#floating-nav {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 12px;
+    z-index: 9999;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 180px;
+    backdrop-filter: blur(10px);
+}
+#floating-nav select { padding: 8px; font-size: 0.9rem; border-radius: 6px; cursor: pointer; }
+#floating-nav a { color: var(--primary); text-decoration: none; font-size: 0.85rem; display: block; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+#floating-nav a:last-child { border-bottom: none; }
+#floating-nav a:hover { opacity: 0.7; padding-left: 5px; transition: 0.2s; }

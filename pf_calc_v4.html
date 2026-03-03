@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Professional 3-Phase PF Lab</title>
+    <link rel="stylesheet" href="shared_theme.css">
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .container { display: flex; gap: 20px; max-width: 1200px; width: 100%; flex-wrap: wrap; justify-content: center; }
@@ -43,6 +44,9 @@
 
         <label>Line Voltage (V): <span id="v_disp">400</span>V</label>
         <input type="range" id="v_line" min="110" max="600" step="10" value="400">
+        <label>Frequency (Hz)</label>
+        <input type="number" id="freq" value="50" step="1">
+
 
         <div class="stat-grid">
             <div class="stat-card">
@@ -80,7 +84,7 @@
         const pf1 = parseFloat(document.getElementById('pf1').value);
         const pf2 = parseFloat(document.getElementById('pf2').value);
         const Vl = parseFloat(document.getElementById('v_line').value);
-        const f = 50;
+        const f = parseFloat(document.getElementById('freq').value) || 50;
 
         document.getElementById('p_disp').innerText = P/1000;
         document.getElementById('pf1_val').innerText = pf1;
@@ -149,5 +153,6 @@
     window.addEventListener('resize', draw);
     draw();
 </script>
+<script src="shared_ui.js"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3-Phase PF Visualizer (Physics Focus)</title>
+    <link rel="stylesheet" href="shared_theme.css">
     <style>
         :root {
             --bg: #0f172a;
@@ -63,6 +64,9 @@
 
         <label>Voltage (V_line): <span id="v_disp">400</span> V</label>
         <input type="range" id="v_line" min="110" max="600" step="10" value="400">
+        <label>Frequency (Hz)</label>
+        <input type="number" id="freq" value="50" step="1">
+
 
         <div class="formula-section">
             <h3>📖 Key Formulas</h3>
@@ -112,7 +116,7 @@
         const pf1 = parseFloat(document.getElementById('pf1').value);
         const pf2 = parseFloat(document.getElementById('pf2').value);
         const Vl = parseFloat(document.getElementById('v_line').value);
-        const f = 50;
+        const f = parseFloat(document.getElementById('freq').value) || 50;
 
         document.getElementById('p_disp').innerText = P_kw;
         document.getElementById('pf1_val').innerText = pf1.toFixed(2);
@@ -174,5 +178,6 @@
     window.addEventListener('resize', update);
     update();
 </script>
+<script src="shared_ui.js"></script>
 </body>
 </html>

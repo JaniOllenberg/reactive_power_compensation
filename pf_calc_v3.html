@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Reactive Power & Phasor Visualizer</title>
+    <link rel="stylesheet" href="shared_theme.css">
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { display: flex; gap: 20px; max-width: 1100px; width: 100%; flex-wrap: wrap; }
@@ -30,6 +31,9 @@
         
         <label>Target PF (cos φ2): <span class="res-val" id="pf2_val">0.95</span></label>
         <input type="range" id="pf2" min="0.1" max="1" step="0.01" value="0.95">
+        <label>Frequency (Hz)</label>
+        <input type="number" id="freq" value="50" step="1">
+
         
         <div style="background:#1a1a1a; padding: 15px; border-radius: 8px; border-left: 4px solid #3498db;">
             <div>Required Q<sub>c</sub>: <span id="res_qc">0</span> kVAR</div>
@@ -76,7 +80,7 @@
         const P = document.getElementById('p').value * 1000;
         const pf1 = parseFloat(document.getElementById('pf1').value);
         const pf2 = parseFloat(document.getElementById('pf2').value);
-        const V = 230; const f = 50;
+        const V = 230; const f = parseFloat(document.getElementById('freq').value) || 50;
         
         document.getElementById('p_disp').innerText = P/1000;
         document.getElementById('pf1_val').innerText = pf1;
@@ -141,5 +145,6 @@
     window.addEventListener('resize', init);
     init();
 </script>
+<script src="shared_ui.js"></script>
 </body>
 </html>

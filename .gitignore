@@ -1,0 +1,24 @@
+# Gemini Chat Exports (Security/Privacy Risk)
+Google Gemini_initial_chat_session.htm
+Google Gemini_initial_chat_session_files/
+*_initial_chat_session.htm
+*_initial_chat_session_files/
+
+# Environment / Secrets
+.env
+.env.local
+config.local.js
+
+# Dependencies
+node_modules/
+dist/
+build/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# OS Files
+.DS_Store
+Thumbs.db
